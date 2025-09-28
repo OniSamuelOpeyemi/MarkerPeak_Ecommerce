@@ -63,7 +63,14 @@ git remote add origin git@github.com:username/MarketPeak.git
 # Push to GitHub
 git push -u origin main
 ```
-![Create a repository](./S)
+![Create a repository](./Screenshots/1.1Repo.png)
+
+![Source code](./Screenshots/1.2code.png)
+
+![Github repo setup and sync](./Screenshots/1.3Github.png)
+
+![Code push](./Screenshots/1.4.png)
+
 ---
 
 ### 2. Set Up AWS EC2 Instance
@@ -76,7 +83,7 @@ git push -u origin main
    - Allow **HTTP (80)** from Anywhere.  
 6. Launch and download your **Key Pair (.pem)**.  
 
-📸 *Insert screenshot here* → `./screenshots/01-launch-ec2.png`
+![EC2 instance](./Screenshots/2.1EC2.png)
 
 ---
 
@@ -88,8 +95,7 @@ chmod 400 marketpeak-key.pem
 # Connect to instance
 ssh -i marketpeak-key.pem ec2-user@<EC2-Public-IP>
 ```
-
-📸 *Insert screenshot here* → `./screenshots/02-ssh-connection.png`
+![Connect to instance](./Screenshots/2.2connect.png)
 
 ---
 
@@ -105,9 +111,7 @@ git clone git@github.com:username/MarketPeak.git
 
 cd MarketPeak
 ```
-
-📸 *Insert screenshot here* → `./screenshots/03-clone-repo.png`
-
+![Cloned Repo. into instance](./Screenshots/CD.png)
 ---
 
 ### 5. Install Apache Web Server
@@ -121,8 +125,7 @@ sudo apt-get install apache2 -y  # Ubuntu
 sudo systemctl start httpd
 sudo systemctl enable httpd
 ```
-
-📸 *Insert screenshot here* → `./screenshots/04-apache-installed.png`
+![Install Apache web server](./Screenshots/2.3Apache.png)
 
 ---
 
@@ -137,7 +140,8 @@ sudo systemctl restart httpd
 
 Now, open **http://<EC2-Public-IP>** in your browser. 🎉
 
-📸 *Insert screenshot here* → `./screenshots/05-website-running.png`
+![Webiste running](./Screenshots/3.website.png)
+
 
 ---
 
@@ -174,7 +178,9 @@ jobs:
           sudo systemctl restart httpd
 ```
 
-📸 *Insert screenshot here* → `./screenshots/06-cicd-workflow.png`
+![Development env](./Screenshots/development.png)
+
+![Code merge](./Screenshots/merge.png)
 
 ---
 
