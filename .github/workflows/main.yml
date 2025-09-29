@@ -20,11 +20,10 @@ jobs:
     - name: Deploy to EC2
       uses: appleboy/ssh-action@v0.1.7
       with:
-        host: ${{ secrets.EC2_HOST }}
+        host: ${{ secrets.EC2_IP }}
         username: ec2-user
         key: ${{ secrets.EC2_SSH_KEY }}
         script: |
           cd /var/www/html
-          git pull origin main
+          git pull origin master
           sudo systemctl restart httpd
-(END)
