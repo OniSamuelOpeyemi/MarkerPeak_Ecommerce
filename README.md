@@ -149,14 +149,18 @@ Now, open **http://<EC2-Public-IP>** in your browser. 🎉
 
 Use **GitHub Actions** for automated deployments.
 
-`.github/workflows/deploy.yml`:
+`.github/workflows/main.yml`:
 ```yaml
 name: Deploy to EC2
 
 on:
+  workflow_dispatch:
+  pull_request: 
+    branches:
+      - master
   push:
     branches:
-      - main
+      - master
 
 jobs:
   deploy:
@@ -169,12 +173,25 @@ jobs:
     - name: Deploy to EC2
       uses: appleboy/ssh-action@v0.1.7
       with:
-        host: ${{ secrets.EC2_HOST }}
+        host: ${{ secrets.EC2_IP }}
         username: ec2-user
         key: ${{ secrets.EC2_SSH_KEY }}
         script: |
-          cd /var/www/html
-          git pull origin main
+          # 1. Pull the latest code to a temp directory
+          rm -rf ~/deploy_temp
+
+          git clone https://github.com/OniSamuelOpeyemi/MarkerPeak_Ecommerce.git ~/deploy_temp
+          cd ~/deploy_temp
+          git init
+
+          # 2. Remove all contents inside /var/www/html but not the folder itself
+          sudo rm -rf /var/www/html/*
+
+          # 3. Copy new files from the subfolder to /var/www/html
+          sudo cp -r ~/deploy_temp/2130_waso_strategy/* /var/www/html/
+
+          # 4. (Optional) Clean up temp directory
+          rm -rf ~/deploy_temp
           sudo systemctl restart httpd
 ```
 
