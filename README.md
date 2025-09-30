@@ -1,4 +1,4 @@
-# 🛒 MarketPeak E-commerce Deployment
+# 🛒 MarkerPeak E-commerce Deployment
 
 MarketPeak is a modern, cloud-powered **eCommerce platform** hosted on **AWS EC2**.  
 This project demonstrates how to manage code with Git, deploy on a Linux server, configure Apache web server, and set up a **CI/CD pipeline** for continuous integration and delivery.
