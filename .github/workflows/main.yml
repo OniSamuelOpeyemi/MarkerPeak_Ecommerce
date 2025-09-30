@@ -31,12 +31,12 @@ jobs:
           cd ~/deploy_temp
           git init
 
-          # 2. Remove all contents inside /var/www/html but not the folder itself
-          sudo rm -rf /var/www/html/*
+          # 2. Remove all contents inside /usr/share/nginx/html but not the folder itself
+          sudo rm -rf /usr/share/nginx/html/*
 
-          # 3. Copy new files from the subfolder to /var/www/html
-          sudo cp -r ~/deploy_temp/2130_waso_strategy/* /var/www/html/
+          # 3. Copy new files from the subfolder to sudo rm -rf /usr/share/nginx/html/*
+          sudo cp -r ~/deploy_temp/2130_waso_strategy/* sudo rm -rf /usr/share/nginx/html/
 
           # 4. (Optional) Clean up temp directory
           rm -rf ~/deploy_temp
-          sudo systemctl restart httpd
+          sudo systemctl restart nginx
