@@ -23,19 +23,20 @@ jobs:
         host: ${{ secrets.EC2_IP }}
         username: ec2-user
         key: ${{ secrets.EC2_SSH_KEY }}
+        debug: true
         script: |
           # 1. Pull the latest code to a temp directory
           rm -rf ~/deploy_temp
 
+          # Use HTTPS clone so no SSH key is required on the runner/EC2 for cloning public repos
           git clone https://github.com/OniSamuelOpeyemi/MarkerPeak_Ecommerce.git ~/deploy_temp
-          cd ~/deploy_temp
-          git init
+          cd ~/deploy_temp || exit 1
 
           # 2. Remove all contents inside /usr/share/nginx/html but not the folder itself
           sudo rm -rf /usr/share/nginx/html/*
 
-          # 3. Copy new files from the subfolder to sudo rm -rf /usr/share/nginx/html/*
-          sudo cp -r ~/deploy_temp/2130_waso_strategy/* sudo rm -rf /usr/share/nginx/html/
+          # 3. Copy new files from the subfolder to the nginx html directory
+          sudo cp -r ~/deploy_temp/2130_waso_strategy/* /usr/share/nginx/html/
 
           # 4. (Optional) Clean up temp directory
           rm -rf ~/deploy_temp
