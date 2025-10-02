@@ -342,6 +342,7 @@ sudo systemctl reload nginx
 - Visit: **https://marketpeak.duckdns.org**  
 - SSL certificate is active (green lock 🔒).  
 - Your site is now secured and production-ready!  
+![Secure website](./Screenshots/secure.png)
 
 ---
 
