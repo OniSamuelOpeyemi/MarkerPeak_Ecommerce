@@ -200,6 +200,150 @@ jobs:
 ![Code merge](./Screenshots/merge.png)
 
 ---
+# 🌐 Nginx Reverse Proxy Setup with DuckDNS & SSL (Certbot)
+
+After switching from **Apache** to **Nginx**, MarketPeak is now served using a reverse proxy, secured with **Let's Encrypt SSL** via **Certbot**.  
+Below are the deployment steps:
+
+---
+
+## 1. Install Nginx
+```bash
+# On Amazon Linux / CentOS
+sudo yum install nginx -y
+
+# On Ubuntu / Debian
+sudo apt-get update
+sudo apt-get install nginx -y
+
+# Enable and start nginx
+sudo systemctl enable nginx
+sudo systemctl start nginx
+```
+
+---
+
+## 2. Configure DuckDNS Domain
+1. Go to [DuckDNS](https://www.duckdns.org) and register/login.  
+2. Create a subdomain, e.g. `marketpeak.duckdns.org`.  
+3. Point your EC2 public IP to the subdomain in DuckDNS.  
+4. Verify DNS is working:
+   ```bash
+   ping marketpeak.duckdns.org
+   ```
+
+---
+
+## 3. Configure Nginx as Reverse Proxy
+Edit the default configuration (or create a new one for MarketPeak):
+
+```bash
+sudo nano /etc/nginx/sites-available/marketpeak
+```
+
+Paste the following configuration:
+```nginx
+server {
+    listen 80;
+    server_name marketpeak.duckdns.org;
+
+    location / {
+        root /var/www/marketpeak;
+        index index.html index.htm;
+        try_files $uri $uri/ =404;
+    }
+}
+```
+
+Enable configuration:
+```bash
+# For Ubuntu/Debian
+sudo ln -s /etc/nginx/sites-available/marketpeak /etc/nginx/sites-enabled/
+
+# Test config
+sudo nginx -t
+
+# Reload nginx
+sudo systemctl reload nginx
+```
+
+Now your site should be available at **http://marketpeak.duckdns.org**
+
+---
+
+## 4. Install Certbot & Enable HTTPS
+Install Certbot (Let's Encrypt client):
+
+```bash
+# On Amazon Linux 2
+sudo amazon-linux-extras enable epel
+sudo yum install certbot python2-certbot-nginx -y
+
+# On Ubuntu
+sudo apt-get install certbot python3-certbot-nginx -y
+```
+
+Obtain SSL certificate:
+```bash
+sudo certbot --nginx -d marketpeak.duckdns.org
+```
+
+Follow the prompts:
+- Enter your email  
+- Agree to terms  
+- Redirect HTTP → HTTPS (recommended)  
+
+---
+
+## 5. Verify SSL Renewal
+Certbot automatically installs a cron job. To test:
+```bash
+sudo certbot renew --dry-run
+```
+
+---
+
+## 6. Final Nginx Configuration (HTTPS Enabled)
+
+```nginx
+server {
+    listen 80;
+    server_name marketpeak.duckdns.org;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name marketpeak.duckdns.org;
+
+    ssl_certificate /etc/letsencrypt/live/marketpeak.duckdns.org/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/marketpeak.duckdns.org/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+    location / {
+        root /var/www/marketpeak;
+        index index.html index.htm;
+        try_files $uri $uri/ =404;
+    }
+}
+```
+
+Reload Nginx:
+```bash
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+---
+
+## 7. Access Your Website
+
+- Visit: **https://marketpeak.duckdns.org**  
+- SSL certificate is active (green lock 🔒).  
+- Your site is now secured and production-ready!  
+
+---
 
 ## 🛠️ Troubleshooting
 
