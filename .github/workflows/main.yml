@@ -2,7 +2,7 @@ name: Deploy to EC2
 
 on:
   workflow_dispatch:
-  pull_request: 
+  pull_request:
     branches:
       - master
   push:
@@ -32,12 +32,14 @@ jobs:
           git clone https://github.com/OniSamuelOpeyemi/MarkerPeak_Ecommerce.git ~/deploy_temp
           cd ~/deploy_temp || exit 1
 
-          # 2. Remove all contents inside /usr/share/nginx/html but not the folder itself
+          # 2. Remove all contents inside /usr/share/nginx/html
           sudo rm -rf /usr/share/nginx/html/*
 
           # 3. Copy new files from the subfolder to the nginx html directory
           sudo cp -r ~/deploy_temp/2130_waso_strategy/* /usr/share/nginx/html/
 
-          # 4. (Optional) Clean up temp directory
+          # 4. Clean up temp directory
           rm -rf ~/deploy_temp
+
+          # 5. Restart nginx
           sudo systemctl restart nginx
