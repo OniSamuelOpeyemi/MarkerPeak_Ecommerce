@@ -9,7 +9,7 @@ This project demonstrates how to manage code with Git, deploy on a Linux server,
 
 1. Implement version control using **Git**.  
 2. Deploy the website on an **AWS EC2 Linux server**.  
-3. Configure **Apache (httpd)** to serve the eCommerce site.  
+3. Configure **Apache (httpd)** and **nginx** to serve the eCommerce site.  
 4. Enable seamless access to the website from a browser.  
 5. Establish a **CI/CD workflow** for continuous deployment.  
 6. Document **troubleshooting steps** for common issues.  
@@ -20,10 +20,12 @@ This project demonstrates how to manage code with Git, deploy on a Linux server,
 
 - **Version Control**: Git + GitHub  
 - **Cloud Provider**: AWS (EC2)  
-- **Web Server**: Apache httpd  
+- **Web Server**: Apache httpd, nginx (web server and reverse proxy)  
 - **OS**: Linux (Amazon Linux 2 / Ubuntu)  
-- **CI/CD**: GitHub Actions  
-- **Deployment**: SSH + Git pull  
+- **CI/CD**: GitHub Actions
+- **Domain record**: duck DNS
+- **SSL certification**: certbot certification
+- **Deployment**: SSH + Git pull
 
 ---
 
@@ -155,12 +157,13 @@ name: Deploy to EC2
 
 on:
   workflow_dispatch:
-  pull_request: 
+  pull_request:
     branches:
       - master
   push:
     branches:
       - master
+      - development
 
 jobs:
   deploy:
@@ -176,23 +179,26 @@ jobs:
         host: ${{ secrets.EC2_IP }}
         username: ec2-user
         key: ${{ secrets.EC2_SSH_KEY }}
+        debug: true
         script: |
           # 1. Pull the latest code to a temp directory
           rm -rf ~/deploy_temp
 
+          # Use HTTPS clone so no SSH key is required on the runner/EC2 for cloning public repos
           git clone https://github.com/OniSamuelOpeyemi/MarkerPeak_Ecommerce.git ~/deploy_temp
-          cd ~/deploy_temp
-          git init
+          cd ~/deploy_temp || exit 1
 
-          # 2. Remove all contents inside /var/www/html but not the folder itself
-          sudo rm -rf /var/www/html/*
+          # 2. Remove all contents inside /usr/share/nginx/html
+          sudo rm -rf /usr/share/nginx/html/*
 
-          # 3. Copy new files from the subfolder to /var/www/html
-          sudo cp -r ~/deploy_temp/2130_waso_strategy/* /var/www/html/
+          # 3. Copy new files from the subfolder to the nginx html directory
+          sudo cp -r ~/deploy_temp/2130_waso_strategy/* /usr/share/nginx/html/
 
-          # 4. (Optional) Clean up temp directory
+          # 4. Clean up temp directory
           rm -rf ~/deploy_temp
-          sudo systemctl restart httpd
+
+          # 5. Restart nginx
+          sudo systemctl restart nginx
 ```
 
 ![Development env](./Screenshots/development.png)
@@ -248,7 +254,7 @@ server {
     server_name marketpeak.duckdns.org;
 
     location / {
-        root /var/www/marketpeak;
+        root /usr/share/nginx/html;
         index index.html index.htm;
         try_files $uri $uri/ =404;
     }
@@ -277,7 +283,7 @@ Install Certbot (Let's Encrypt client):
 ```bash
 # On Amazon Linux 2
 sudo amazon-linux-extras enable epel
-sudo yum install certbot python2-certbot-nginx -y
+sudo yum install certbot python3-certbot-nginx -y
 
 # On Ubuntu
 sudo apt-get install certbot python3-certbot-nginx -y
@@ -322,7 +328,7 @@ server {
     ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
 
     location / {
-        root /var/www/marketpeak;
+        root /usr/share/nginx/html;
         index index.html index.htm;
         try_files $uri $uri/ =404;
     }
