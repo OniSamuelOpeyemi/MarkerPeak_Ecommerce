@@ -342,6 +342,7 @@ sudo systemctl reload nginx
 - Visit: **https://marketpeak.duckdns.org**  
 - SSL certificate is active (green lock 🔒).  
 - Your site is now secured and production-ready!  
+![Secure website](./Screenshots/secure.png)
 
 ---
 
@@ -354,3 +355,136 @@ sudo systemctl reload nginx
 | **Website not loading** | Security Group misconfigured | Allow inbound HTTP 80 in EC2 Security Group |
 | **Changes not reflecting** | Cache or outdated files | Run `git pull` and `sudo systemctl restart httpd` |
 | **403 Forbidden** | File permissions issue | Run `sudo chown -R apache:apache /var/www/html` |
+---
+
+## 🆘 Troubleshooting & Operational Notes
+
+This section collects the practical fixes and lessons learned while deploying MarketPeak on EC2 with Nginx/Apache and GitHub Actions.
+
+### SSH access and deploy keys
+
+- If you get "Permission denied (publickey)" when the GitHub Action or `ssh` fails, ensure the private key used by the action matches a public key present in `/home/<user>/.ssh/authorized_keys` on the EC2 instance.
+- Recommended local key generation (on your secure admin machine):
+
+```bash
+ssh-keygen -t rsa -b 4096 -C "deploy@marketpeak" -f ~/markerpeak_deploy_key
+```
+
+- Secure the private key (do not commit):
+```bash
+chmod 600 ~/markerpeak_deploy_key
+```
+
+- Install the public key on EC2 (either via existing SSH session or AWS Session Manager):
+```bash
+# On your local machine
+scp -i /path/to/old_key.pem ~/markerpeak_deploy_key.pub ec2-user@EC2_IP:~/markerpeak_deploy_key.pub
+# On EC2
+cat ~/markerpeak_deploy_key.pub >> ~/.ssh/authorized_keys
+rm ~/markerpeak_deploy_key.pub
+chmod 600 ~/.ssh/authorized_keys
+chmod 700 ~/.ssh
+chown -R ec2-user:ec2-user ~/.ssh
+```
+
+- If the `authorized_keys` file doesn't exist (fresh instance), create it safely on the instance:
+```bash
+mkdir -p ~/.ssh
+chmod 700 ~/.ssh
+touch ~/.ssh/authorized_keys
+chmod 600 ~/.ssh/authorized_keys
+```
+
+### Adding the private key to GitHub Actions secrets
+
+- Copy the private key content and save it as a repository secret named `EC2_SSH_KEY` (Settings → Secrets and variables → Actions → New repository secret).
+- If your key has a passphrase, store it as `EC2_SSH_PASSPHRASE` and pass it to the action inputs.
+- Example `gh` CLI command to set the secret (requires GH CLI and an authenticated session):
+```bash
+gh secret set EC2_SSH_KEY --body "$(sed -e ':a' -e 'N' -e '$!ba' -e 's/"/\\"/g' ~/markerpeak_deploy_key)"
+```
+
+### Nginx 403 Forbidden — checklist
+
+If your site returns `403 Forbidden` with Nginx and the configuration you've posted, follow these steps in order:
+
+1. Check the Nginx error log for the precise reason:
+```bash
+sudo tail -n 200 /var/log/nginx/error.log
+```
+
+2. Verify the site root has an index file (index.html):
+```bash
+ls -la /usr/share/nginx/html
+echo '<h1>It works</h1>' | sudo tee /usr/share/nginx/html/index.html
+sudo chmod 644 /usr/share/nginx/html/index.html
+```
+
+3. Ensure permissions and ownership allow the `nginx` worker to read files (typical permissions: dirs 755, files 644):
+```bash
+sudo find /usr/share/nginx/html -type d -exec chmod 755 {} \;
+sudo find /usr/share/nginx/html -type f -exec chmod 644 {} \;
+sudo chown -R root:root /usr/share/nginx/html
+```
+
+4. If SELinux is enabled, restore proper contexts:
+```bash
+getenforce || echo 'SELinux check not available'
+sudo restorecon -Rv /usr/share/nginx/html
+```
+
+5. Make sure your Nginx config includes an `index` directive (add inside the `server` block):
+```
+index index.html index.htm;
+```
+
+6. Test and reload Nginx:
+```bash
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+### CI/CD action notes and gotchas
+
+- Use HTTPS clone inside the remote script when the server/runner does not have a deploy key or GitHub SSH access.
+- When using `appleboy/ssh-action`, ensure the runner-side secrets exist:
+  - `EC2_IP` — public IP or DNS of your EC2 instance
+  - `EC2_SSH_KEY` — the private key text
+  - optionally `EC2_SSH_PASSPHRASE`
+- Add `debug: true` to the action `with:` to get verbose logs during debugging.
+- To validate the EC2 host key, you can use the action's `fingerprint` input (preferred for security). Use `ssh-keyscan` to retrieve the host key fingerprint.
+
+Example host key scan:
+```bash
+ssh-keyscan -t rsa EC2_IP >> /tmp/hostkey.pub
+ssh-keygen -lf /tmp/hostkey.pub
+```
+
+### Recovery if you are locked out of SSH
+
+If you cannot connect by SSH and need to fix `/home/ec2-user/.ssh/authorized_keys`:
+
+1. Use the AWS Console → EC2 → Instances → Select instance → Connect → Session Manager to get a shell.
+2. Create the `.ssh` folder and paste your public key into `authorized_keys` (see commands above).
+3. Ensure correct permissions and ownership.
+
+### Quick verification commands
+
+- Test SSH with verbose logging from your admin machine:
+```bash
+ssh -i ~/markerpeak_deploy_key ec2-user@EC2_IP -v
+```
+
+- Test a simple curl request to the server (HTTP):
+```bash
+curl -I http://marketpeak.duckdns.org/
+```
+
+### Security & operational best practices
+
+- Don't commit private keys to the repository. Use GitHub Secrets.
+- Rotate deploy keys periodically and remove old keys from `authorized_keys`.
+- Limit SSH Security Group rules to your admin IP for management; keep HTTP/HTTPS open to the world as needed.
+- Use AWS Systems Manager Session Manager as a safer alternative to open SSH in production.
+
+---
